@@ -64,6 +64,43 @@ func IsectArea(a ScreenInfo, b ScreenInfo) int {
 	return Max(0, brx-tlx) * Max(0, bry-tly)
 }
 
+type mapKey struct {
+	Key1 string
+	Key2 int
+}
+
+func TestFunc(scrs []ScreenInfo) map[mapKey]int {
+	r := map[mapKey]int{}
+	for ia, sa := range scrs {
+		for ib, sb := range scrs {
+			if sa != sb {
+				if IsectArea(ScreenInfo{
+					W: sa.W,
+					H: sa.H,
+					X: sa.X + sa.W,
+					Y: sa.Y,
+				}, sb) != 0 {
+					r[mapKey{Key1: "right", Key2: ia}] = ib
+					r[mapKey{Key1: "left", Key2: ib}] = ia
+				}
+				if IsectArea(ScreenInfo{
+					W: sa.W,
+					H: sa.H,
+					X: sa.X,
+					Y: sa.Y + sa.H,
+				}, sb) {
+					r[mapKey{Key1: "down", Key2: ia}] = ib
+					r[mapKey{Key1: "up", Key2: ib}] = ia
+				}
+			}
+		}
+		r[mapKey{Key1: "next", Key2: ia}] = (ia + 1) % len(scr)
+		r[mapKey{Key1: "prev", Key2: ia}] = (ia - 1) % len(scr)
+		r[mapKey{Key1: "fit", Key2: ia}] = ia
+	}
+	return r
+}
+
 func GetWindowInfo(listId []string) {
 	for _, id := range listId {
 		out, err := exec.Command("xwininfo", "-id", id, "-all").Output()
