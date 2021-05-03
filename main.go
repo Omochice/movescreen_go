@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -69,8 +70,16 @@ type mapKey struct {
 	Key2 int
 }
 
-func TestFunc(scrs []ScreenInfo) map[mapKey]int {
-	r := map[mapKey]int{}
+func TestFunc(scrs []ScreenInfo) map[string][]int {
+	r := map[string][]int{}
+	dirs := [7]string{"left", "right", "up", "down", "next", "prev", "fit"}
+	for _, k := range dirs {
+		s := []int{}
+		for i := 0; i < len(scrs); i++ {
+			s = append(s, 0)
+		}
+		r[k] = s
+	}
 	for ia, sa := range scrs {
 		for ib, sb := range scrs {
 			if sa != sb {
@@ -80,47 +89,169 @@ func TestFunc(scrs []ScreenInfo) map[mapKey]int {
 					X: sa.X + sa.W,
 					Y: sa.Y,
 				}, sb) != 0 {
-					r[mapKey{Key1: "right", Key2: ia}] = ib
-					r[mapKey{Key1: "left", Key2: ib}] = ia
+					r["right"][ia] = ib
+					r["left"][ib] = ia
 				}
-				if IsectArea(ScreenInfo{
-					W: sa.W,
+				if IsectArea(ScreenInfo{W: sa.W,
 					H: sa.H,
 					X: sa.X,
 					Y: sa.Y + sa.H,
 				}, sb) != 0 {
-					r[mapKey{Key1: "down", Key2: ia}] = ib
-					r[mapKey{Key1: "up", Key2: ib}] = ia
+					r["down"][ia] = ib
+					r["up"][ib] = ia
 				}
 			}
 		}
-		r[mapKey{Key1: "next", Key2: ia}] = (ia + 1) % len(scrs)
-		r[mapKey{Key1: "prev", Key2: ia}] = (ia - 1) % len(scrs)
-		r[mapKey{Key1: "fit", Key2: ia}] = ia
+		r["next"][ia] = (ia + 1) % len(scrs)
+		r["prev"][ia] = (ia - 1) % len(scrs)
+		r["fit"][ia] = ia
 	}
 	return r
 }
 
 func GetWinIdList() []string {
-	listId := []string{"hoge"}
+	listId := []string{}
 	out, err := exec.Command("xprop", "-root", "_NET_ACTIVE_WINDOW").Output()
 	if err != nil {
 		panic(err)
 	}
 	r := regexp.MustCompile("window id # (0x[0-9a-f]+)")
 	listId = append(listId, r.FindStringSubmatch(string(out))[1])
-	match := hoge
 	return listId
 }
 
-func GetWindowInfo(listId []string) {
+func GetWindowInfo(listId []string, dir string) {
 	for _, id := range listId {
+		geoStr := [...]string{
+			"Width:", "Height:",
+			"Absolute upper-left X:", "Absolute upper-left Y:",
+			"Relative upper-left X:", "Relative upper-left Y:", "",
+		}
+		stateStr := map[string]struct{}{
+			"Maximized Vert": struct{}{}, "Maximized Horz": struct{}{}, "Fullscreen": struct{}{},
+		}
+		geo := [6]int{}
 		out, err := exec.Command("xwininfo", "-id", id, "-all").Output()
 		if err != nil {
 			panic(err)
 		}
+		state := []string{}
 
+		for _, line := range strings.Split(string(out), "\n") {
+			line = strings.TrimSpace(line)
+			idx := len(geoStr)
+			// state := []string{}
+			for i, s := range geoStr {
+				if strings.HasPrefix(line, s) {
+					idx = i
+					break
+				}
+			}
+			if geoStr[idx] != "" {
+				splitedList := strings.Fields(line)
+				v, err := strconv.Atoi(splitedList[len(splitedList)-1])
+				if err != nil {
+					panic(err)
+				}
+				geo[idx] = v
+			} else if _, ok := stateStr[line]; ok {
+				state = append(state, strings.Replace(strings.ToLower(line), " ", "_", -1))
+			} else if line == "Desktop" {
+				os.Exit(2)
+			}
+		}
+		areas := []int{}
+		g := ScreenInfo{
+			W: geo[0],
+			H: geo[1],
+			X: geo[2],
+			Y: geo[3],
+		}
+		srcs := GetScreenInformation()
+		for _, s := range srcs {
+			areas = append(areas, IsectArea(g, s))
+		}
+		sidx, err := Index(areas, ArrMax(append(areas, 1)))
+		if err != nil {
+			os.Exit(3)
+		}
+
+		r := TestFunc(srcs)
+		if sidx > len(srcs) {
+			panic(fmt.Errorf("the index is out of range, ${len(src)}"))
+		}
+		nscr := srcs[r[dir][sidx]]
+
+		npos := []int{geo[2] - geo[4], geo[3] - geo[5]}
+		nsiz := geo[0:2]
+
+		if dir == "fit" {
+			// TODO make this
+			// fmt.Println("fit")
+		} else {
+			idx := -1
+			dirStr := [7]string{"left", "right", "up", "down", "next", "prev", "fit"}
+			for i, v := range dirStr {
+				if v == dir {
+					idx = i / 2
+				}
+			}
+			if idx < 0 {
+				panic(fmt.Errorf("direction is invalid"))
+			}
+			if idx == 0 {
+				npos[0] += nscr.X - srcs[sidx].X
+			} else if idx == 1 {
+				npos[1] += nscr.Y - srcs[sidx].Y
+			} else if idx == 2 {
+				npos[0] += nscr.X - srcs[sidx].X
+				npos[1] += nscr.Y - srcs[sidx].Y
+			}
+		}
+
+		cmdOpsiton := [][]string{}
+		for _, v := range state {
+			cmdOpsiton = append(cmdOpsiton, []string{"-b", "toggle," + v})
+		}
+		wmctrl(id, cmdOpsiton)
+
+		cmdOpsiton2 := [][]string{}
+		ntuple := append(npos, nsiz...)
+		cmdOpsiton2 = append(cmdOpsiton2, []string{"-e", fmt.Sprintf("0,%d,%d,%d,%d", ntuple[0], ntuple[1], ntuple[2], ntuple[3])})
+		wmctrl(id, cmdOpsiton2)
+
+		wmctrl(id, cmdOpsiton)
 	}
+}
+
+func wmctrl(id string, ops [][]string) {
+	baseCmd := []string{"wmctrl", "-i", "-r"}
+	for _, op := range ops {
+		cmd := append(baseCmd, id)
+		cmd = append(cmd, op...)
+		exec.Command(cmd[0], cmd[1:]...).Run()
+	}
+
+}
+
+func Index(arr []int, n int) (int, error) {
+	for i, v := range arr {
+		if v == n {
+			return i, nil
+		}
+	}
+	err := fmt.Errorf(`the query ${n} not in arr`)
+	return -1, err
+}
+
+func ArrMax(arr []int) int {
+	res := arr[0]
+	for i := 1; i < len(arr); i++ {
+		if arr[i] > res {
+			res = arr[i]
+		}
+	}
+	return res
 }
 func main() {
 	app := &cli.App{
@@ -155,7 +286,9 @@ func main() {
 			if !ok {
 				panic("dir str is invalid")
 			}
-			GetScreenInformation()
+			// GetScreenInformation()
+
+			GetWindowInfo(GetWinIdList(), c.Args().First())
 			return nil
 		},
 	}
