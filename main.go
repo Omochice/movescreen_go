@@ -88,17 +88,29 @@ func TestFunc(scrs []ScreenInfo) map[mapKey]int {
 					H: sa.H,
 					X: sa.X,
 					Y: sa.Y + sa.H,
-				}, sb) {
+				}, sb) != 0 {
 					r[mapKey{Key1: "down", Key2: ia}] = ib
 					r[mapKey{Key1: "up", Key2: ib}] = ia
 				}
 			}
 		}
-		r[mapKey{Key1: "next", Key2: ia}] = (ia + 1) % len(scr)
-		r[mapKey{Key1: "prev", Key2: ia}] = (ia - 1) % len(scr)
+		r[mapKey{Key1: "next", Key2: ia}] = (ia + 1) % len(scrs)
+		r[mapKey{Key1: "prev", Key2: ia}] = (ia - 1) % len(scrs)
 		r[mapKey{Key1: "fit", Key2: ia}] = ia
 	}
 	return r
+}
+
+func GetWinIdList() []string {
+	listId := []string{"hoge"}
+	out, err := exec.Command("xprop", "-root", "_NET_ACTIVE_WINDOW").Output()
+	if err != nil {
+		panic(err)
+	}
+	r := regexp.MustCompile("window id # (0x[0-9a-f]+)")
+	listId = append(listId, r.FindStringSubmatch(string(out))[1])
+	match := hoge
+	return listId
 }
 
 func GetWindowInfo(listId []string) {
