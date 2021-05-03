@@ -64,6 +64,15 @@ func IsectArea(a ScreenInfo, b ScreenInfo) int {
 	return Max(0, brx-tlx) * Max(0, bry-tly)
 }
 
+func GetWindowInfo(listId []string) {
+	for _, id := range listId {
+		out, err := exec.Command("xwininfo", "-id", id, "-all").Output()
+		if err != nil {
+			panic(err)
+		}
+
+	}
+}
 func main() {
 	app := &cli.App{
 		Name:      "Title",
