@@ -266,6 +266,8 @@ func MoveScreen(dir string) error {
 		return err
 	}
 
+	GetWindowInfo(GetWinIdList(), dir)
+
 	return nil
 
 }
@@ -296,7 +298,6 @@ func main() {
 				panic(err)
 			}
 
-			GetWindowInfo(GetWinIdList(), c.Args().First())
 			return nil
 		},
 	}
