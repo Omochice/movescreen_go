@@ -65,11 +65,6 @@ func IsectArea(a ScreenInfo, b ScreenInfo) int {
 	return Max(0, brx-tlx) * Max(0, bry-tly)
 }
 
-type mapKey struct {
-	Key1 string
-	Key2 int
-}
-
 func TestFunc(scrs []ScreenInfo) map[string][]int {
 	r := map[string][]int{}
 	dirs := [7]string{"left", "right", "up", "down", "next", "prev", "fit"}
