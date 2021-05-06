@@ -266,6 +266,8 @@ func MoveScreen(dir string) error {
 		return err
 	}
 
+	return nil
+
 }
 
 func main() {
@@ -286,7 +288,7 @@ func main() {
 			// name := "Nefertii"
 			if c.NArg() < 1 {
 				// fmt.Println(c.NArg())
-				panic("hogehoge")
+				panic("argment is too few.")
 			}
 
 			err := MoveScreen(c.Args().First())
