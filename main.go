@@ -255,19 +255,19 @@ func ArrMax(arr []int) int {
 }
 func main() {
 	app := &cli.App{
-		Name:      "Title",
-		Usage:     "hogehgoe",
-		UsageText: "konnnitiha",
+		Name:      "movescreen",
+		Usage:     "Move the screen to adjacent window.",
+		UsageText: "movescreen [-r|--ratio] <left|right|up|down|next|prev|fit>",
 
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:    "ratio",
 				Aliases: []string{"r"},
-				Usage:   "this is ratio option",
+				Usage:   "keep the ratio of the window.",
 			},
 		},
 		Action: func(c *cli.Context) error {
-			fmt.Println(c.Args())
+			// fmt.Println(c.Args())
 			dirStr := map[string]struct{}{
 				"left":  struct{}{},
 				"right": struct{}{},
@@ -279,7 +279,7 @@ func main() {
 			}
 			// name := "Nefertii"
 			if c.NArg() < 1 {
-				fmt.Println(c.NArg())
+				// fmt.Println(c.NArg())
 				panic("hogehoge")
 			}
 			_, ok := dirStr[c.Args().First()]
