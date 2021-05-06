@@ -65,15 +65,15 @@ func IsectArea(a ScreenInfo, b ScreenInfo) int {
 	return Max(0, brx-tlx) * Max(0, bry-tly)
 }
 
-func TestFunc(scrs []ScreenInfo) map[string][]int {
-	r := map[string][]int{}
+func GetScreenLocate(scrs []ScreenInfo) map[string][]int {
+	locate := map[string][]int{}
 	dirs := [7]string{"left", "right", "up", "down", "next", "prev", "fit"}
 	for _, k := range dirs {
 		s := []int{}
 		for i := 0; i < len(scrs); i++ {
 			s = append(s, 0)
 		}
-		r[k] = s
+		locate[k] = s
 	}
 	for ia, sa := range scrs {
 		for ib, sb := range scrs {
@@ -84,24 +84,24 @@ func TestFunc(scrs []ScreenInfo) map[string][]int {
 					X: sa.X + sa.W,
 					Y: sa.Y,
 				}, sb) != 0 {
-					r["right"][ia] = ib
-					r["left"][ib] = ia
+					locate["right"][ia] = ib
+					locate["left"][ib] = ia
 				}
 				if IsectArea(ScreenInfo{W: sa.W,
 					H: sa.H,
 					X: sa.X,
 					Y: sa.Y + sa.H,
 				}, sb) != 0 {
-					r["down"][ia] = ib
-					r["up"][ib] = ia
+					locate["down"][ia] = ib
+					locate["up"][ib] = ia
 				}
 			}
 		}
-		r["next"][ia] = (ia + 1) % len(scrs)
-		r["prev"][ia] = (ia - 1) % len(scrs)
-		r["fit"][ia] = ia
+		locate["next"][ia] = (ia + 1) % len(scrs)
+		locate["prev"][ia] = (ia - 1) % len(scrs)
+		locate["fit"][ia] = ia
 	}
-	return r
+	return locate
 }
 
 func GetWinIdList() []string {
@@ -123,7 +123,9 @@ func GetWindowInfo(listId []string, dir string) {
 			"Relative upper-left X:", "Relative upper-left Y:", "",
 		}
 		stateStr := map[string]struct{}{
-			"Maximized Vert": struct{}{}, "Maximized Horz": struct{}{}, "Fullscreen": struct{}{},
+			"Maximized Vert": struct{}{},
+			"Maximized Horz": struct{}{},
+			"Fullscreen":     struct{}{},
 		}
 		geo := [6]int{}
 		out, err := exec.Command("xwininfo", "-id", id, "-all").Output()
@@ -171,11 +173,11 @@ func GetWindowInfo(listId []string, dir string) {
 			os.Exit(3)
 		}
 
-		r := TestFunc(srcs)
+		locate := GetScreenLocate(srcs)
 		if sidx > len(srcs) {
-			panic(fmt.Errorf("the index is out of range, ${len(src)}"))
+			panic(fmt.Errorf("the index is out of range, %d", len(srcs)))
 		}
-		nscr := srcs[r[dir][sidx]]
+		nscr := srcs[locate[dir][sidx]]
 
 		npos := []int{geo[2] - geo[4], geo[3] - geo[5]}
 		nsiz := geo[0:2]
@@ -248,6 +250,24 @@ func ArrMax(arr []int) int {
 	}
 	return res
 }
+
+func MoveScreen(dir string) error {
+	dirs := map[string]struct{}{
+		"left":  struct{}{},
+		"right": struct{}{},
+		"up":    struct{}{},
+		"down":  struct{}{},
+		"next":  struct{}{},
+		"prev":  struct{}{},
+		"fit":   struct{}{},
+	}
+	if _, ok := dirs[dir]; !ok {
+		err := fmt.Errorf("%s is invalid !.", dir)
+		return err
+	}
+
+}
+
 func main() {
 	app := &cli.App{
 		Name:      "movescreen",
@@ -263,25 +283,16 @@ func main() {
 		},
 		Action: func(c *cli.Context) error {
 			// fmt.Println(c.Args())
-			dirStr := map[string]struct{}{
-				"left":  struct{}{},
-				"right": struct{}{},
-				"up":    struct{}{},
-				"down":  struct{}{},
-				"next":  struct{}{},
-				"prev":  struct{}{},
-				"fit":   struct{}{},
-			}
 			// name := "Nefertii"
 			if c.NArg() < 1 {
 				// fmt.Println(c.NArg())
 				panic("hogehoge")
 			}
-			_, ok := dirStr[c.Args().First()]
-			if !ok {
-				panic("dir str is invalid")
+
+			err := MoveScreen(c.Args().First())
+			if err != nil {
+				panic(err)
 			}
-			// GetScreenInformation()
 
 			GetWindowInfo(GetWinIdList(), c.Args().First())
 			return nil
