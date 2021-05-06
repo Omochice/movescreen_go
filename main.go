@@ -206,18 +206,20 @@ func GetWindowInfo(listId []string, dir string) {
 			}
 		}
 
-		cmdOpsiton := [][]string{}
-		for _, v := range state {
-			cmdOpsiton = append(cmdOpsiton, []string{"-b", "toggle," + v})
-		}
-		wmctrl(id, cmdOpsiton)
-
-		cmdOpsiton2 := [][]string{}
-		ntuple := append(npos, nsiz...)
-		cmdOpsiton2 = append(cmdOpsiton2, []string{"-e", fmt.Sprintf("0,%d,%d,%d,%d", ntuple[0], ntuple[1], ntuple[2], ntuple[3])})
-		wmctrl(id, cmdOpsiton2)
-
-		wmctrl(id, cmdOpsiton)
+		fmt.Println(geo, nsiz)
+		fmt.Println("wmctrl called")
+		// cmdOpsiton := [][]string{}
+		// for _, v := range state {
+		// 	cmdOpsiton = append(cmdOpsiton, []string{"-b", "toggle," + v})
+		// }
+		// wmctrl(id, cmdOpsiton)
+		//
+		// cmdOpsiton2 := [][]string{}
+		// ntuple := append(npos, nsiz...)
+		// cmdOpsiton2 = append(cmdOpsiton2, []string{"-e", fmt.Sprintf("0,%d,%d,%d,%d", ntuple[0], ntuple[1], ntuple[2], ntuple[3])})
+		// wmctrl(id, cmdOpsiton2)
+		//
+		// wmctrl(id, cmdOpsiton)
 	}
 }
 
@@ -286,13 +288,9 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			// fmt.Println(c.Args())
-			// name := "Nefertii"
 			if c.NArg() < 1 {
-				// fmt.Println(c.NArg())
 				panic("argment is too few.")
 			}
-
 			err := MoveScreen(c.Args().First())
 			if err != nil {
 				panic(err)
